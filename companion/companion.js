@@ -101,7 +101,6 @@ function isRegistered() {
 }
 
 // ─── Setup UI (GUI prompt when run by double-clicking the EXE) ───────────────
-// Uses a bundled HTML page opened via the default browser when stdin is a TTY.
 
 function showSetupAndRegister() {
   // Read extension ID from saved config or prompt via CLI
@@ -316,15 +315,21 @@ function showStatus(msg, type) {
 function startNativeMessaging() {
   log('Starting in native messaging mode');
 
-  const { Client: RpcClient } = require('discord-rpc');
   const clientId = process.env.DISCORD_CLIENT_ID || DISCORD_CLIENT_ID;
-  const rpc = new RpcClient({ transport: 'ipc' });
+  
+  // Use WebSocket transport for web Discord
+  const rpc = new Client({
+    transport: 'websocket',
+    clientId: clientId
+  });
+  
   let rpcReady = false;
   let pendingActivity = null;
 
   async function connectDiscord() {
     try {
       await rpc.login({ clientId });
+      log('Discord WebSocket connected. User:', rpc.user?.username);
     } catch (e) {
       log('Discord connect failed:', e.message);
       send({ status: 'disconnected', error: e.message });
