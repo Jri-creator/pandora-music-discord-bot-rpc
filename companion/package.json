@@ -5,12 +5,16 @@
   "main": "companion.js",
   "scripts": {
     "start": "node companion.js",
-    "build:exe": "pkg . --compress GZip --out-path ../dist --output pandora-discord-rpc"
+    "build:exe": "pkg . --compress GZip "
+  },
+  "bin": {
+  "pandora-discord-rpc": "./companion.js"
   },
   "pkg": {
-    "targets": ["node18-win-x64"],
-    "assets": ["assets/**/*"],
-    "scripts": ["companion.js"]
+  "targets": ["node18-win-x64"],
+  "assets": ["assets/**/*"],
+  "outputPath": "../dist",
+  "outputName": "pandora-discord-rpc"
   },
   "dependencies": {
     "discord-rpc": "^4.0.1"
