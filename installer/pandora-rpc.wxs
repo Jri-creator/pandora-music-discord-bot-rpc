@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  installer/pandora-rpc.wxs
+  WiX Toolset v4 installer definition.
+  Built by GitHub Actions — do not edit GUIDs manually.
+  Product/Component GUIDs are stable; change them only on major version bumps.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Package
+    Name="Pandora Discord RPC"
+    Manufacturer="PandoraRPC"
+    Version="1.0.0"
+    UpgradeCode="A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
+    Language="1033"
+    Codepage="1252"
+    InstallerVersion="500"
+    Compressed="yes">
+
+    <!-- Allow upgrades and prevent downgrades -->
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of Pandora Discord RPC is already installed."
+      Schedule="afterInstallInitialize" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ── Install directory ──────────────────────────────────────── -->
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="PandoraDiscordRPC" />
+    </StandardDirectory>
+
+    <!-- ── Feature ───────────────────────────────────────────────── -->
+    <Feature Id="ProductFeature" Title="Pandora Discord RPC" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="StartMenuShortcuts" />
+      <ComponentGroupRef Id="StartupEntry" />
+    </Feature>
+
+    <!-- ── Files ─────────────────────────────────────────────────── -->
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+
+      <Component Id="MainExe" Guid="B2C3D4E5-F6A7-8901-BCDE-F12345678901">
+        <File
+          Id="PandoraRPCExe"
+          Name="pandora-discord-rpc.exe"
+          Source="..\dist\pandora-discord-rpc.exe"
+          KeyPath="yes" />
+      </Component>
+
+      <!-- Registry: Native Messaging host will be written by the EXE itself on first run.
+           We just ensure the uninstaller removes any registry key we left. -->
+      <Component Id="RegCleanup" Guid="C3D4E5F6-A7B8-9012-CDEF-123456789012">
+        <RegistryKey Root="HKCU"
+          Key="Software\Google\Chrome\NativeMessagingHosts\com.pandora_discord_rpc"
+          ForceDeleteOnUninstall="yes">
+          <RegistryValue Type="string" Value="" KeyPath="yes" />
+        </RegistryKey>
+      </Component>
+
+    </ComponentGroup>
+
+    <!-- ── Start Menu shortcut ───────────────────────────────────── -->
+    <ComponentGroup Id="StartMenuShortcuts">
+      <Component Id="StartMenuShortcut"
+                 Directory="ProgramMenuFolder"
+                 Guid="D4E5F6A7-B8C9-0123-DEF0-234567890123">
+        <Shortcut
+          Id="AppStartMenuShortcut"
+          Name="Pandora Discord RPC"
+          Description="Show Pandora now-playing in Discord"
+          Target="[INSTALLFOLDER]pandora-discord-rpc.exe"
+          WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="CleanUpShortcutsDir" Directory="ProgramMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+          Key="Software\PandoraDiscordRPC"
+          Name="installed"
+          Type="integer" Value="1"
+          KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- ── Run at Windows startup (optional, user can remove) ────── -->
+    <ComponentGroup Id="StartupEntry">
+      <Component Id="StartupReg"
+                 Directory="INSTALLFOLDER"
+                 Guid="E5F6A7B8-C9D0-1234-EF01-345678901234">
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\Microsoft\Windows\CurrentVersion\Run"
+          Name="PandoraDiscordRPC"
+          Type="string"
+          Value="[INSTALLFOLDER]pandora-discord-rpc.exe"
+          KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- ── UI ───────────────────────────────────────────────────── -->
+    <UI>
+      <UIRef Id="WixUI_InstallDir" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
+    </UI>
+
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+    <!-- ── Launch app after install ─────────────────────────────── -->
+    <CustomAction
+      Id="LaunchApp"
+      Directory="INSTALLFOLDER"
+      Execute="immediate"
+      ExeCommand="[INSTALLFOLDER]pandora-discord-rpc.exe"
+      Return="asyncNoWait" />
+
+    <InstallExecuteSequence>
+      <Custom Action="LaunchApp" After="InstallFinalize">NOT Installed</Custom>
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix>

@@ -1,0 +1,166 @@
+# .github/workflows/build.yml
+# Builds the Pandora Discord RPC companion as:
+#   • pandora-discord-rpc.exe  (standalone, via pkg)
+#   • pandora-discord-rpc.msi  (Windows installer, via WiX 4)
+#   • pandora-discord-rpc-extension.zip (the Chrome extension)
+#
+# Triggers:
+#   • Push a tag like v1.0.0  → full release build + GitHub Release
+#   • Push to main            → build-only (no release)
+#   • Pull request            → build-only
+
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags:     ['v*.*.*']
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ── Job 1: Build EXE + MSI (Windows runner required for WiX) ──────────────
+  build-windows:
+    name: Build EXE & MSI
+    runs-on: windows-latest
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Node.js ─────────────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: companion/package-lock.json
+
+      # ── Install companion dependencies ───────────────────────────────────────
+      - name: Install companion deps
+        working-directory: companion
+        run: npm ci
+
+      # ── Inject Discord Client ID from repository secret ──────────────────────
+      # Set DISCORD_CLIENT_ID in: Settings → Secrets → Actions → New secret
+      - name: Patch Discord Client ID
+        shell: pwsh
+        env:
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+        run: |
+          if ($env:DISCORD_CLIENT_ID) {
+            $file = "companion/companion.js"
+            (Get-Content $file) `
+              -replace "YOUR_DISCORD_APP_CLIENT_ID_HERE", $env:DISCORD_CLIENT_ID |
+              Set-Content $file
+            Write-Host "Client ID patched."
+          } else {
+            Write-Host "No DISCORD_CLIENT_ID secret set — users will enter it via setup UI."
+          }
+
+      # ── Build EXE via pkg ────────────────────────────────────────────────────
+      - name: Build EXE (pkg)
+        working-directory: companion
+        run: |
+          npm run build:exe
+          dir ..\dist
+
+      # ── Rename for clarity ───────────────────────────────────────────────────
+      - name: Rename EXE
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item dist\pandora-discord-rpc.exe dist\pandora-discord-rpc.exe -Force
+
+      # ── WiX 4 ────────────────────────────────────────────────────────────────
+      - name: Install WiX 4
+        run: dotnet tool install --global wix
+
+      - name: Add WiX UI extension
+        run: wix extension add WixToolset.UI.wixext/4.0.5
+
+      # ── Build MSI ────────────────────────────────────────────────────────────
+      - name: Build MSI
+        run: |
+          wix build installer\pandora-rpc.wxs `
+            -ext WixToolset.UI.wixext `
+            -o dist\pandora-discord-rpc.msi
+
+      # ── Zip the Chrome extension ──────────────────────────────────────────────
+      - name: Zip extension
+        shell: pwsh
+        run: |
+          Compress-Archive -Path extension\* `
+            -DestinationPath dist\pandora-discord-rpc-extension.zip -Force
+
+      # ── Upload build artifacts ────────────────────────────────────────────────
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pandora-discord-rpc-windows
+          path: |
+            dist/pandora-discord-rpc.exe
+            dist/pandora-discord-rpc.msi
+            dist/pandora-discord-rpc-extension.zip
+          retention-days: 30
+
+  # ── Job 2: Create GitHub Release on tag push ──────────────────────────────
+  release:
+    name: GitHub Release
+    needs: build-windows
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write   # needed to create releases
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pandora-discord-rpc-windows
+          path: dist/
+
+      - name: Extract tag version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Pandora Discord RPC v${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## Pandora → Discord Rich Presence v${{ steps.version.outputs.VERSION }}
+
+            ### 📦 Downloads
+
+            | File | What it is |
+            |------|-----------|
+            | `pandora-discord-rpc.msi` | **Recommended** — Windows installer. Installs the app, adds a Start Menu shortcut, and runs it at startup. |
+            | `pandora-discord-rpc.exe` | Standalone EXE — no installation needed, just double-click. |
+            | `pandora-discord-rpc-extension.zip` | Chrome extension — unzip and load via `chrome://extensions` → Developer Mode → Load Unpacked. |
+
+            ### 🚀 Quick Start
+
+            1. Download and run `pandora-discord-rpc.msi`
+            2. It will open a **setup page** in your browser on first launch
+            3. Enter your Discord Application ID and Chrome Extension ID
+            4. Open Pandora, play music, check Discord!
+
+            ### 📋 Requirements
+            - Windows 10/11 (x64)
+            - Discord desktop app (running)
+            - Google Chrome
+
+            See the [README](https://github.com/${{ github.repository }}/blob/main/README.md) for full setup instructions.
+          files: |
+            dist/pandora-discord-rpc.msi
+            dist/pandora-discord-rpc.exe
+            dist/pandora-discord-rpc-extension.zip
+          draft: false
+          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}

@@ -1,0 +1,9 @@
+{
+  "name": "com.pandora_discord_rpc",
+  "description": "Pandora Discord Rich Presence companion",
+  "path": "REPLACE_WITH_ABSOLUTE_PATH_TO/companion.js",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://REPLACE_WITH_YOUR_EXTENSION_ID/"
+  ]
+}

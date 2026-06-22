@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pandora Discord RPC</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1b2e;
+      color: #e8e8f0;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #00a0ee, #3668ff);
+      padding: 16px 18px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header__logo {
+      font-size: 22px;
+    }
+
+    .header__titles h1 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .header__titles p {
+      font-size: 11px;
+      opacity: 0.75;
+      margin-top: 1px;
+    }
+
+    .status-bar {
+      padding: 8px 18px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #13131f;
+      border-bottom: 1px solid #2a2b40;
+      font-size: 12px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot--connected    { background: #43b581; box-shadow: 0 0 6px #43b581aa; }
+    .dot--disconnected { background: #f04747; }
+    .dot--connecting   { background: #faa61a; }
+
+    .now-playing {
+      padding: 16px 18px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      min-height: 90px;
+    }
+
+    .now-playing__art {
+      width: 64px;
+      height: 64px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #2a2b40;
+    }
+
+    .now-playing__art--placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+
+    .now-playing__info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .now-playing__track {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #fff;
+    }
+
+    .now-playing__artist {
+      font-size: 12px;
+      color: #9a9ab5;
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .now-playing__album {
+      font-size: 11px;
+      color: #6c6c88;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .now-playing__station {
+      font-size: 11px;
+      color: #3668ff;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    .now-playing__state {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .state--playing { background: #43b58122; color: #43b581; }
+    .state--paused  { background: #faa61a22; color: #faa61a; }
+
+    .progress {
+      margin: 0 18px 14px;
+    }
+
+    .progress__bar-bg {
+      height: 3px;
+      background: #2a2b40;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress__bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00a0ee, #3668ff);
+      border-radius: 3px;
+      transition: width 2s linear;
+    }
+
+    .progress__times {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #6c6c88;
+      margin-top: 4px;
+    }
+
+    .idle {
+      padding: 24px 18px;
+      text-align: center;
+      color: #6c6c88;
+      font-size: 13px;
+    }
+
+    .idle__icon { font-size: 32px; margin-bottom: 8px; }
+
+    .footer {
+      border-top: 1px solid #2a2b40;
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+
+    .btn--danger {
+      background: #f0474722;
+      color: #f04747;
+    }
+
+    .btn--link {
+      background: transparent;
+      color: #3668ff;
+      text-decoration: none;
+      padding: 5px 0;
+    }
+
+    .footer__version {
+      font-size: 10px;
+      color: #3a3a55;
+    }
+
+    #setup-note {
+      background: #faa61a11;
+      border: 1px solid #faa61a44;
+      border-radius: 6px;
+      margin: 0 18px 14px;
+      padding: 10px 12px;
+      font-size: 11px;
+      color: #faa61a;
+      line-height: 1.5;
+    }
+
+    #setup-note a {
+      color: #faa61a;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header__logo">🎵</div>
+    <div class="header__titles">
+      <h1>Pandora → Discord</h1>
+      <p>Rich Presence Bridge</p>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">Connecting…</span>
+  </div>
+
+  <div id="mainContent"></div>
+
+  <div class="footer">
+    <button class="btn btn--danger" id="clearBtn">Clear Status</button>
+    <span class="footer__version">v1.0.0</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

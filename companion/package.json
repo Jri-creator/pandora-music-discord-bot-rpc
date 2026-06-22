@@ -1,0 +1,21 @@
+{
+  "name": "pandora-discord-rpc",
+  "version": "1.0.0",
+  "description": "Pandora Discord Rich Presence companion",
+  "main": "companion.js",
+  "scripts": {
+    "start": "node companion.js",
+    "build:exe": "pkg . --compress GZip --out-path ../dist --output pandora-discord-rpc"
+  },
+  "pkg": {
+    "targets": ["node18-win-x64"],
+    "assets": ["assets/**/*"],
+    "scripts": ["companion.js"]
+  },
+  "dependencies": {
+    "discord-rpc": "^4.0.1"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  }
+}
